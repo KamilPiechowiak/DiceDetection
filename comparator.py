@@ -36,17 +36,28 @@ class Comparator:
         self.patterns[pattern_id] = pattern
         self.vertices[pattern_id] = vertices
 
-    def prepare_pattern(self, nodes, pattern_id):
+    def prepare_pattern(self, nodes, pattern_id, reduce=True):
         src = np.array(self.vertices[pattern_id])
         src[:,[0,1]] = src[:,[1,0]]
         dst = np.array([n.center for n in nodes])
+        if reduce:
+            d = max(np.max(dst[:,0])-np.min(dst[:,0]), np.max(dst[:,1])-np.min(dst[:,1]))
+            self.shift_x = int(max(0, np.min(dst[:,0])-2*d))
+            self.shift_y = int(max(0, np.min(dst[:,1])-2*d))
+            dst[:,0]-=self.shift_x
+            dst[:,1]-=self.shift_y
+            output_shape = (int(5*d), int(5*d))
+        else:
+            self.shift_x = 0
+            self.shift_y = 0
+            output_shape = self.labels.shape
         # dst = np.array([[540, 152], [558, 158], [550, 145]])
         # dst+=-100
         dst[:,[0,1]] = dst[:,[1,0]]
         assert len(src) == len(dst)
         at = tr.AffineTransform()
         at.estimate(dst, src)
-        pattern = tr.warp(np.array(self.patterns[pattern_id], dtype=np.float), at, output_shape=self.labels.shape, order=0, cval=-1)
+        pattern = tr.warp(np.array(self.patterns[pattern_id], dtype=np.float), at, output_shape=output_shape, order=0, cval=-1)
         pattern = np.array(pattern, dtype=np.int)
         return pattern
     
@@ -54,7 +65,7 @@ class Comparator:
         penalty = 0
         for color in range(2, num+2):
             ids = np.argwhere(pattern == color)
-            seq = (ids[:,0], ids[:,1])
+            seq = (ids[:,0]+self.shift_x, ids[:,1]+self.shift_y)
             regions = np.unique(self.labels[seq])
             # print(regions)
             region_penalty = 0
@@ -79,11 +90,11 @@ class Comparator:
         return penalty
 
     def compare(self, nodes, pattern_id):
-        pattern = self.prepare_pattern(nodes, pattern_id)
+        pattern = self.prepare_pattern(nodes, pattern_id, reduce=True)
         # plt.imshow(pattern)
         # plt.show()
         return self.match_pattern(pattern, pattern_id)
     
     def get_pattern(self, nodes, pattern_id):
-        pattern = self.prepare_pattern(nodes, pattern_id)
+        pattern = self.prepare_pattern(nodes, pattern_id, reduce=False)
         return pattern >= 0
