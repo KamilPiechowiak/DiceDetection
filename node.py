@@ -15,14 +15,16 @@ def get_neighbours(a, graph, d=2):
         return res
 
 class Node:
-    def __init__(self, a, graph, indices):
+    def __init__(self, a, graph, indices, fake=False):
+        self.visited = False
         self.a = a
+        if fake:
+            return
         self.graph = graph
         self.indices = indices
         self.neighbours = get_neighbours(self.a, self.graph, 2)
         self.center = (np.mean(indices[:,0]), np.mean(indices[:,1]))
         self.area = indices.shape[0]
-        self.visited = False
     
     def update_neighbours(self, nodes, img_size):
         r = np.sqrt(self.area/np.pi)
@@ -31,11 +33,11 @@ class Node:
             n = nodes[i]
             dist = np.linalg.norm(np.array(self.center)-np.array(n.center))
             area_ratio = self.area/n.area
-            if dist > 5*r:
+            if dist > 6*r:
                 to_remove.append(i)
             elif n.area > img_size/40:
                 to_remove.append(i)
-            elif area_ratio > 3 or area_ratio < 1/3:
+            elif area_ratio > 2 or area_ratio < 1/2:
                 to_remove.append(i)
 
         self.neighbours-=set(to_remove)
@@ -106,7 +108,7 @@ def img_to_nodes(img):
         return nodes
 
     edges = edg(img)
-    labels = sg.slic(img, compactness=4, min_size_factor=0.001)
+    labels = sg.slic(img, compactness=10, min_size_factor=0.001)
     g = graph.rag_boundary(labels, edges)
     labels = graph.merge_hierarchical(labels, g, thresh=0.2, rag_copy=False,
                                    in_place_merge=True,

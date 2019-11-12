@@ -8,38 +8,56 @@ import numpy as np
 from operator import itemgetter
 
 class DiceDetector():
+
+    def generate_fake_node(self, a, b, ratio):
+        a = np.array(a.center)
+        b = np.array(b.center)
+        v = b-a
+        u = np.array([v[1], -v[0]])
+        u*=ratio/2
+        mid = (a+b)/2
+        n = Node(-1, None, None, True)
+        n.center = mid+u
+        return n
         
     def detect_with_node(self, node, dots):
         best = 1e9
         best_nodes = []
+        best_regions = []
         if dots > 3:
             for i in node.neighbours:
                 for j in node.neighbours:
+                    if i == j:
+                        continue
                     nodes = [node, self.nodes[i], self.nodes[j]]
-                    penalty = self.comparator.compare(nodes, dots)
+                    penalty, regions = self.comparator.compare(nodes, dots)
                     if penalty < best:
                         best = penalty
                         best_nodes = nodes
+                        best_regions = regions
         elif dots in {2, 3}:
             for i in node.neighbours:
-                nodes = [node, self.nodes[i]]
-                penalty = self.comparator.compare(nodes, dots)
-                if penalty < best:
-                    best = penalty
-                    best_nodes = nodes
+                for ratio in [0.5, 0.75, 1, 1.33, 2]:
+                    nodes = [node, self.nodes[i], self.generate_fake_node(node, self.nodes[i], ratio)]
+                    # print([n.center for n in nodes])
+                    penalty, regions = self.comparator.compare(nodes, dots)
+                    if penalty < best:
+                        best = penalty
+                        best_nodes = nodes
+                        best_regions = regions
         else:
             pass #TODO
-        return best, best_nodes
+        return best, best_nodes, best_regions
 
 
     def detect(self, img):
-        threshold = 0.6
+        threshold = 1.0
         labels, self.nodes = img_to_nodes(img)
         self.comparator = Comparator(self.nodes, labels)
 
         self.res = []
 
-        for dots in range(6, 3, -1):
+        for dots in range(6, 1, -1):
             matches = []
             for node in tqdm(self.nodes.values()):
                 matches.append(self.detect_with_node(node, dots))
@@ -56,7 +74,8 @@ class DiceDetector():
                     continue
                 pattern = self.comparator.get_pattern(m[1], dots)
                 self.res.append((find_contours(pattern, 0.5)[0], dots))
-                for n in m[1]:
+                print(m[0])
+                for n in m[2]:
                     print(n.a, end=' ')
                     n.visited = True
                 print(' ')

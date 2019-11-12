@@ -11,7 +11,8 @@ from utils import change_colors
 import matplotlib.pyplot as plt
 
 def analyze():
-    for i in range(2, 3):
+    k = 26
+    for i in range(k, k+1):
         img = io.imread('small/' + str(i) + '.jpg')
         img = median(img)
         # res = img_to_nodes(img)
@@ -22,15 +23,16 @@ def analyze():
         dd = DiceDetector()
         dd.detect(img)
         img = dd.mark_sides(img)
-        io.imsave('m/' + str(i) + '.png', img)
+        io.imsave('c/' + str(i) + '.png', img)
 
         # labels, nodes = img_to_nodes(img)
         # for n in nodes.values():
         #     print(len(n.neighbours))
-        # # c = Comparator(nodes, labels)
-        # # print(c.compare([], 5))
-        # # plt.imshow(mask)
-        # # plt.show()
+        # c = Comparator(nodes, labels)
+        # c.compare([], 3)
+        # c.compare([], 6)
+        # plt.imshow(mask)
+        # plt.show()
         # io.imsave('n/' + str(i) + '.png', change_colors(labels))
 
 analyze()
