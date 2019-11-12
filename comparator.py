@@ -13,18 +13,25 @@ INF = 1e18
 
 class Comparator:
     def __init__(self, all_nodes, labels):
-        self.patterns = {}
-        self.vertices = {}
-        self.all_vertices = {}
+        self.patterns = [{}, {}]
+        self.vertices = [{}, {}]
+        self.all_vertices = [{}, {}]
+        self.black_area = [{}, {}]
         for i in range(6, 0, -1):
-            self.init_pattern(i)
+            self.init_pattern(i, 0)
+        for i in range(6, 0, -1):
+            self.init_pattern(i, 1)
         self.all_nodes = all_nodes
         self.labels = labels
 
-    def init_pattern(self, pattern_id):
+    def init_pattern(self, pattern_id, pattern_size):
         coordinates = [[2], [2,3], [2,4], [2,3,4], [2,3,4], [2,3,6]]
-        img = io.imread('r/' + str(pattern_id) + '.png')
+        dir_path = 'r/'
+        if pattern_size == 1:
+            dir_path = 'p/'
+        img = io.imread(dir_path + str(pattern_id) + '.png')
         pattern = np.array(img[:,:,0] < 127, dtype=np.int)
+        self.black_area[pattern_size][pattern_id] = np.count_nonzero(pattern)
         num = 2
         while True:
             ids = np.argwhere(pattern == 1)
@@ -39,22 +46,25 @@ class Comparator:
             vertices.append((np.mean(ids[:,0]), np.mean(ids[:,1])))
         
         if pattern_id == 2 or pattern_id == 3:
-            vertices.append(self.vertices[4][2])
+            vertices.append(self.vertices[pattern_size][4][2])
+        if pattern_id == 1:
+            vertices.append(self.all_vertices[pattern_size][4][2])
+            vertices.append(self.all_vertices[pattern_size][4][3])
         
-        self.patterns[pattern_id] = pattern
-        self.vertices[pattern_id] = vertices
+        self.patterns[pattern_size][pattern_id] = pattern
+        self.vertices[pattern_size][pattern_id] = vertices
 
         all_vertices = []
         for i in range(2, pattern_id+2):
             ids = np.argwhere(pattern == i)
             all_vertices.append((np.mean(ids[:,0]), np.mean(ids[:,1])))
-        self.all_vertices[pattern_id] = np.array(all_vertices)
+        self.all_vertices[pattern_size][pattern_id] = np.array(all_vertices)
         # print(self.all_vertices)
         # print(pattern_id, vertices)
     
 
-    def prepare_pattern(self, nodes, pattern_id, reduce=True):
-        src = np.array(self.vertices[pattern_id])
+    def prepare_pattern(self, nodes, pattern_id, pattern_size, reduce=True):
+        src = np.array(self.vertices[pattern_size][pattern_id])
         src[:,[0,1]] = src[:,[1,0]]
         dst = np.array([n.center for n in nodes])
         # dst = np.array([[540, 152], [558, 158], [550, 145]])
@@ -78,12 +88,12 @@ class Comparator:
         assert len(src) == len(dst)
         at = tr.AffineTransform()
         at.estimate(dst, src)
-        pattern = tr.warp(np.array(self.patterns[pattern_id], dtype=np.float), at, output_shape=output_shape, order=0, cval=-1)
+        pattern = tr.warp(np.array(self.patterns[pattern_size][pattern_id], dtype=np.float), at, output_shape=output_shape, order=0, cval=-1)
         pattern = np.array(pattern, dtype=np.int)
         
         at2 = tr.AffineTransform()
         at2.estimate(src[:,[1,0]], dst[:,[1,0]])
-        self.current_coord = at2(self.all_vertices[pattern_id])
+        self.current_coord = at2(self.all_vertices[pattern_size][pattern_id])
         self.current_coord[:,0]+=self.shift_x
         self.current_coord[:,1]+=self.shift_y
         return pattern
@@ -244,7 +254,7 @@ class Comparator:
         # print(penalty_black, penalty_white, penalty, seq[0].shape[0])
         # for r in all_regions:
         #     print(region_area[r], region_black_area[r])
-        if all_regions.size < 3:
+        if all_regions.size < 3 and num >= 2:
             return INF, []        
         # print(penalty)
         # if num == 3:
@@ -252,12 +262,12 @@ class Comparator:
         return penalty, [self.all_nodes[r] for r in all_regions]
 
     def compare(self, nodes, pattern_id):
-        pattern = self.prepare_pattern(nodes, pattern_id, reduce=True)
+        pattern = self.prepare_pattern(nodes, pattern_id, 0, reduce=True)
         # plt.imshow(pattern)
         # plt.show()
         return self.match_pattern(pattern, pattern_id)
     
     def get_pattern(self, nodes, pattern_id):
-        pattern = self.prepare_pattern(nodes, pattern_id, reduce=False)
+        pattern = self.prepare_pattern(nodes, pattern_id, 1, reduce=False)
         print(np.count_nonzero(pattern >= 0), self.labels.size*MAX_SIZE)
         return pattern >= 0

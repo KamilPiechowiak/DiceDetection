@@ -11,7 +11,7 @@ from utils import change_colors
 import matplotlib.pyplot as plt
 
 def analyze():
-    k = 1
+    k = 8
     for i in range(k, k+1):
         img = io.imread('small/' + str(i) + '.jpg')
         img = median(img)

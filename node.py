@@ -2,6 +2,7 @@ import numpy as np
 import skimage.segmentation as sg
 from skimage.future import graph
 import skimage.measure as me
+import skimage.morphology as mp
 
 from utils import edg
 
@@ -108,6 +109,15 @@ def img_to_nodes(img, mask):
             n.update_neighbours(nodes, labels.size)
         return nodes
 
+    def relabel(labels):
+        idx, counts = np.unique(labels, return_counts=True)
+        idx = idx[counts.argsort()]
+        idx = idx[::-1]
+        ch = np.zeros_like(idx)
+        ch[idx] = np.arange(idx.size)
+        labels = ch[labels]
+        return labels
+
     edges = edg(img)
     # labels = sg.slic(img, compactness=10, min_size_factor=0.001)
     labels = me.label(mask)
@@ -116,6 +126,10 @@ def img_to_nodes(img, mask):
                                    in_place_merge=True,
                                    merge_func=merge_boundary,
                                    weight_func=weight_boundary)
+    labels = relabel(labels)
+    labels = mp.dilation(labels)
+    labels = mp.area_closing(labels, 10)
+    labels = mp.erosion(labels)
     g = graph.rag_boundary(labels, edges)
     nodes = separate_regions(labels, g)
 

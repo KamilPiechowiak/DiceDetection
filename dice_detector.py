@@ -9,6 +9,11 @@ from operator import itemgetter
 from skimage.color import rgb2gray
 
 class DiceDetector():
+    def __init__(self):
+        self.rotations_matrices = {}
+        for angle in range(0, 90, 15):
+            theta = np.radians(angle)
+            self.rotations_matrices[angle] = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
 
     def generate_fake_node(self, a, b, ratio):
         a = np.array(a.center)
@@ -20,6 +25,24 @@ class DiceDetector():
         n = Node(-1, None, None, True)
         n.center = mid+u
         return n
+    
+    def generate_nodes_for_one(self, node, ratio, angle):
+        global_ratio = np.sqrt(node.area/self.comparator.black_area[0][1])
+        if global_ratio > 1:
+            return False, 0, 0
+        vertices = np.array(self.comparator.vertices[0][1])
+        v = vertices[1]-vertices[0]
+        u = vertices[2]-vertices[0]
+        v*= global_ratio*ratio
+        u*= global_ratio/ratio
+        v = np.dot(self.rotations_matrices[angle], v)
+        u = np.dot(self.rotations_matrices[angle], u)
+        a = Node(-1, None, None, True)
+        a.center = node.center+v
+        b = Node(-1, None, None, True)
+        b.center = node.center+u
+        # print(b.center)
+        return True, a, b
         
     def detect_with_node(self, node, dots):
         best = 1e9
@@ -47,19 +70,32 @@ class DiceDetector():
                         best_nodes = nodes
                         best_regions = regions
         else:
-            pass #TODO
+            for ratio in [1]:
+                for angle in range(0, 90, 15):
+                    valid, a, b = self.generate_nodes_for_one(node, ratio, angle)
+                    if valid == False:
+                        continue
+                    nodes = [node, a, b]
+                    # print(nodes)
+                    penalty, regions = self.comparator.compare(nodes, dots)
+                    if penalty < best:
+                        best = penalty
+                        best_nodes = nodes
+                        best_regions = regions
+
         return best, best_nodes, best_regions
 
 
     def detect_single(self, img, mask):
         thresholds = [0.4]*7
+        thresholds[1] = 0.1
         thresholds[2] = 0.2
         labels, self.nodes = img_to_nodes(img, mask)
         self.comparator = Comparator(self.nodes, labels)
 
         res = []
 
-        for dots in range(6, 1, -1):
+        for dots in range(6, 0, -1):
             matches = []
             for node in tqdm(self.nodes.values()):
                 matches.append(self.detect_with_node(node, dots))
