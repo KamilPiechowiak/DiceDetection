@@ -1,6 +1,7 @@
 import numpy as np
 import skimage.segmentation as sg
 from skimage.future import graph
+import skimage.measure as me
 
 from utils import edg
 
@@ -33,7 +34,7 @@ class Node:
             n = nodes[i]
             dist = np.linalg.norm(np.array(self.center)-np.array(n.center))
             area_ratio = self.area/n.area
-            if dist > 6*r:
+            if dist > 8*r:
                 to_remove.append(i)
             elif n.area > img_size/40:
                 to_remove.append(i)
@@ -44,7 +45,7 @@ class Node:
         if self.area > img_size/40:
             self.neighbours = set()
 
-def img_to_nodes(img):
+def img_to_nodes(img, mask):
 
     def weight_boundary(graph, src, dst, n):
         """
@@ -108,7 +109,8 @@ def img_to_nodes(img):
         return nodes
 
     edges = edg(img)
-    labels = sg.slic(img, compactness=10, min_size_factor=0.001)
+    # labels = sg.slic(img, compactness=10, min_size_factor=0.001)
+    labels = me.label(mask)
     g = graph.rag_boundary(labels, edges)
     labels = graph.merge_hierarchical(labels, g, thresh=0.2, rag_copy=False,
                                    in_place_merge=True,

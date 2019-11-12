@@ -23,7 +23,7 @@ class Comparator:
 
     def init_pattern(self, pattern_id):
         coordinates = [[2], [2,3], [2,4], [2,3,4], [2,3,4], [2,3,6]]
-        img = io.imread('p/' + str(pattern_id) + '.png')
+        img = io.imread('r/' + str(pattern_id) + '.png')
         pattern = np.array(img[:,:,0] < 127, dtype=np.int)
         num = 2
         while True:
@@ -118,6 +118,7 @@ class Comparator:
             penalty+= region_penalty/max(ids.shape[0], 1e-6)
 
         penalty/=num
+        # print(penalty)
         return penalty, [self.all_nodes[r] for r in all_regions]
 
     def color2seq(self, pattern, color):
@@ -246,6 +247,8 @@ class Comparator:
         if all_regions.size < 3:
             return INF, []        
         # print(penalty)
+        # if num == 3:
+        #     print(penalty)
         return penalty, [self.all_nodes[r] for r in all_regions]
 
     def compare(self, nodes, pattern_id):

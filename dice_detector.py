@@ -6,6 +6,7 @@ import skimage.morphology as mp
 from tqdm import tqdm
 import numpy as np
 from operator import itemgetter
+from skimage.color import rgb2gray
 
 class DiceDetector():
 
@@ -50,12 +51,13 @@ class DiceDetector():
         return best, best_nodes, best_regions
 
 
-    def detect(self, img):
-        threshold = 1.0
-        labels, self.nodes = img_to_nodes(img)
+    def detect_single(self, img, mask):
+        thresholds = [0.4]*7
+        thresholds[2] = 0.2
+        labels, self.nodes = img_to_nodes(img, mask)
         self.comparator = Comparator(self.nodes, labels)
 
-        self.res = []
+        res = []
 
         for dots in range(6, 1, -1):
             matches = []
@@ -64,7 +66,7 @@ class DiceDetector():
 
             matches.sort(key=itemgetter(0))
             for m in matches:
-                if m[0] > threshold:
+                if m[0] > thresholds[dots]:
                     break
                 vis = False
                 for n in m[1]:
@@ -73,13 +75,22 @@ class DiceDetector():
                 if vis:
                     continue
                 pattern = self.comparator.get_pattern(m[1], dots)
-                self.res.append((find_contours(pattern, 0.5)[0], dots))
+                res.append((find_contours(pattern, 0.5)[0], dots))
                 print(m[0])
                 for n in m[2]:
                     print(n.a, end=' ')
                     n.visited = True
                 print(' ')
 
+        return res
+
+    def detect(self, img):
+        gray = rgb2gray(img)
+        minv = np.percentile(gray, 3)
+        maxv = np.percentile(gray, 97)
+        gray = (gray-minv)/(maxv-minv)
+        self.res = self.detect_single(img, gray < 0.3)
+        self.res+= self.detect_single(img, gray > 0.4)
         return self.res
 
     def mark_sides(self, img):
