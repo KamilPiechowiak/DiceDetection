@@ -5,6 +5,14 @@ from skimage.filters import sobel
 def norm(arr):
     return (arr-np.min(arr))/(np.max(arr)-np.min(arr))
 
+def norm_with_percentiles(arr, a, b):
+    minv = np.percentile(arr, a)
+    maxv = np.percentile(arr, b)
+    arr = (arr-minv)/(maxv-minv)
+    arr[arr < 0] = 0
+    arr[arr > 1] = 1
+    return arr
+
 def edg(img):
     res = np.zeros_like(img, dtype=np.float)
     for i in range(img.shape[2]):

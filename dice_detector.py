@@ -1,5 +1,3 @@
-from node import img_to_nodes, Node
-from comparator import Comparator
 from skimage.measure import find_contours
 from skimage.draw import polygon_perimeter
 import skimage.morphology as mp
@@ -8,6 +6,10 @@ import numpy as np
 from operator import itemgetter
 from skimage.color import rgb2gray
 
+from node import img_to_nodes, Node
+from comparator import Comparator
+from side_detector import SideDetector
+
 class DiceDetector():
     def __init__(self):
         self.rotations_matrices = {}
@@ -15,20 +17,22 @@ class DiceDetector():
             theta = np.radians(angle)
             self.rotations_matrices[angle] = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
 
-    def generate_fake_node(self, a, b, ratio):
+    def generate_fake_node(self, a, b, ratio, pattern_id):
         a = np.array(a.center)
         b = np.array(b.center)
         v = b-a
         u = np.array([v[1], -v[0]])
         u*=ratio/2
-        mid = (a+b)/2
         n = Node(-1, None, None, True)
-        n.center = mid+u
+        if pattern_id == 2:
+            n.center = (a+b)/2+u
+        else:
+            n.center = b+2*u
         return n
     
     def generate_nodes_for_one(self, node, ratio, angle):
         global_ratio = np.sqrt(node.area/self.comparator.black_area[0][1])
-        if global_ratio > 1:
+        if global_ratio > 5:
             return False, 0, 0
         vertices = np.array(self.comparator.vertices[0][1])
         v = vertices[1]-vertices[0]
@@ -62,7 +66,7 @@ class DiceDetector():
         elif dots in {2, 3}:
             for i in node.neighbours:
                 for ratio in [0.5, 0.75, 1, 1.33, 2]:
-                    nodes = [node, self.nodes[i], self.generate_fake_node(node, self.nodes[i], ratio)]
+                    nodes = [node, self.nodes[i], self.generate_fake_node(node, self.nodes[i], ratio, dots)]
                     # print([n.center for n in nodes])
                     penalty, regions = self.comparator.compare(nodes, dots)
                     if penalty < best:
@@ -70,26 +74,34 @@ class DiceDetector():
                         best_nodes = nodes
                         best_regions = regions
         else:
-            for ratio in [1]:
-                for angle in range(0, 90, 15):
-                    valid, a, b = self.generate_nodes_for_one(node, ratio, angle)
-                    if valid == False:
-                        continue
-                    nodes = [node, a, b]
-                    # print(nodes)
-                    penalty, regions = self.comparator.compare(nodes, dots)
-                    if penalty < best:
-                        best = penalty
-                        best_nodes = nodes
-                        best_regions = regions
+            val, nodes = self.size_detector.detect(node)
+            if val > 0.5:
+                penalty, regions = self.comparator.compare(nodes, dots)
+                if penalty < best:
+                    best = penalty
+                    best_nodes = nodes
+                    best_regions = regions
+            # for ratio in [1]:
+            #     for angle in range(0, 90, 15):
+            #         valid, a, b = self.generate_nodes_for_one(node, ratio, angle)
+            #         if valid == False:
+            #             continue
+            #         nodes = [node, a, b]
+            #         # print(nodes)
+            #         penalty, regions = self.comparator.compare(nodes, dots)
+            #         if penalty < best:
+            #             best = penalty
+            #             best_nodes = nodes
+            #             best_regions = regions
+
 
         return best, best_nodes, best_regions
 
 
     def detect_single(self, img, mask):
         thresholds = [0.4]*7
-        thresholds[1] = 0.1
-        thresholds[2] = 0.2
+        thresholds[1] = 0.7
+        thresholds[2] = 0.3
         labels, self.nodes = img_to_nodes(img, mask)
         self.comparator = Comparator(self.nodes, labels)
 
@@ -121,6 +133,7 @@ class DiceDetector():
         return res
 
     def detect(self, img):
+        self.size_detector = SideDetector(img)
         gray = rgb2gray(img)
         minv = np.percentile(gray, 3)
         maxv = np.percentile(gray, 97)

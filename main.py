@@ -7,12 +7,13 @@ from dice_detector import DiceDetector
 from node import img_to_nodes
 from comparator import Comparator
 from utils import change_colors
+from side_detector import SideDetector
 
 import matplotlib.pyplot as plt
 
 def analyze():
-    k = 8
-    for i in range(k, k+1):
+    k = 5
+    for i in range(24, 28):
         img = io.imread('small/' + str(i) + '.jpg')
         img = median(img)
         # res = img_to_nodes(img)
@@ -25,7 +26,14 @@ def analyze():
         img = dd.mark_sides(img)
         io.imsave('m/' + str(i) + '.png', img)
 
-        # labels, nodes = img_to_nodes(img, rgb2gray(img) < 0.5)
+        # gray = rgb2gray(img)
+        # minv = np.percentile(gray, 3)
+        # maxv = np.percentile(gray, 97)
+        # gray = (gray-minv)/(maxv-minv)
+        # labels, nodes = img_to_nodes(img, gray > 0.4)
+        # # print(labels[297, 465])
+        # sd = SideDetector(img)
+        # sd.detect(nodes[2])#2, 28, 5
         # for n in nodes.values():
         #     print(len(n.neighbours))
         # c = Comparator(nodes, labels)

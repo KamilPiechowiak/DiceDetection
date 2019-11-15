@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from node import Node
 
-MIN_SIZE = 10
+MIN_SIZE = 20
 MAX_SIZE = 0.02
 INF = 1e18
 
@@ -25,12 +25,12 @@ class Comparator:
         self.labels = labels
 
     def init_pattern(self, pattern_id, pattern_size):
-        coordinates = [[2], [2,3], [2,4], [2,3,4], [2,3,4], [2,3,6]]
-        dir_path = 'r/'
+        coordinates = [[2], [2,3], [2,3], [2,3,4], [2,3,4], [2,3,6]]
+        dir_path = 'rs/'
         if pattern_size == 1:
-            dir_path = 'p/'
+            dir_path = 'ps/'
         img = io.imread(dir_path + str(pattern_id) + '.png')
-        pattern = np.array(img[:,:,0] < 127, dtype=np.int)
+        pattern = np.array(img < 127, dtype=np.int)
         self.black_area[pattern_size][pattern_id] = np.count_nonzero(pattern)
         num = 2
         while True:
