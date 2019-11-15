@@ -119,7 +119,6 @@ def img_to_nodes(img, mask):
         return labels
 
     edges = edg(img)
-    # labels = sg.slic(img, compactness=10, min_size_factor=0.001)
     labels = me.label(mask)
     g = graph.rag_boundary(labels, edges)
     labels = graph.merge_hierarchical(labels, g, thresh=0.2, rag_copy=False,

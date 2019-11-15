@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 from operator import itemgetter
 from skimage.color import rgb2gray
+from skimage.filters import median
 
 from node import img_to_nodes, Node
 from comparator import Comparator
@@ -29,24 +30,6 @@ class DiceDetector():
         else:
             n.center = b+2*u
         return n
-    
-    def generate_nodes_for_one(self, node, ratio, angle):
-        global_ratio = np.sqrt(node.area/self.comparator.black_area[0][1])
-        if global_ratio > 5:
-            return False, 0, 0
-        vertices = np.array(self.comparator.vertices[0][1])
-        v = vertices[1]-vertices[0]
-        u = vertices[2]-vertices[0]
-        v*= global_ratio*ratio
-        u*= global_ratio/ratio
-        v = np.dot(self.rotations_matrices[angle], v)
-        u = np.dot(self.rotations_matrices[angle], u)
-        a = Node(-1, None, None, True)
-        a.center = node.center+v
-        b = Node(-1, None, None, True)
-        b.center = node.center+u
-        # print(b.center)
-        return True, a, b
         
     def detect_with_node(self, node, dots):
         best = 1e9
@@ -67,7 +50,6 @@ class DiceDetector():
             for i in node.neighbours:
                 for ratio in [0.5, 0.75, 1, 1.33, 2]:
                     nodes = [node, self.nodes[i], self.generate_fake_node(node, self.nodes[i], ratio, dots)]
-                    # print([n.center for n in nodes])
                     penalty, regions = self.comparator.compare(nodes, dots)
                     if penalty < best:
                         best = penalty
@@ -81,19 +63,6 @@ class DiceDetector():
                     best = penalty
                     best_nodes = nodes
                     best_regions = regions
-            # for ratio in [1]:
-            #     for angle in range(0, 90, 15):
-            #         valid, a, b = self.generate_nodes_for_one(node, ratio, angle)
-            #         if valid == False:
-            #             continue
-            #         nodes = [node, a, b]
-            #         # print(nodes)
-            #         penalty, regions = self.comparator.compare(nodes, dots)
-            #         if penalty < best:
-            #             best = penalty
-            #             best_nodes = nodes
-            #             best_regions = regions
-
 
         return best, best_nodes, best_regions
 
@@ -133,6 +102,7 @@ class DiceDetector():
         return res
 
     def detect(self, img):
+        img = median(img)
         self.size_detector = SideDetector(img)
         gray = rgb2gray(img)
         minv = np.percentile(gray, 3)

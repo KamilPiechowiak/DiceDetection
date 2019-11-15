@@ -29,33 +29,6 @@ class SideDetector:
     def get_line_point_point(self, a, b): #a, b - points
         a, b = np.round(a).astype(int), np.round(b).astype(int)
         return line(a[0], a[1], b[0], b[1])
-        # v = b-a
-        # # print(a, b, v)
-        # if abs(v[0]) < EPS:
-        #     v/=abs(v[1])
-        #     y = np.arange(a[1], b[1], v[1])
-        #     x = np.ones_like(y)
-        #     x*=a[0]
-        # elif abs(v[1]) < EPS:
-        #     v/=abs(v[0])
-        #     x = np.arange(a[0], b[0], v[0])
-        #     y = np.ones_like(x)
-        #     y*=a[1]
-        # else:
-        #     v/=np.min(np.abs(v))
-        #     x = np.arange(a[0], b[0], v[0])
-        #     y = np.arange(a[1], b[1], v[1])
-        # x = np.round(x)
-        # y = np.round(y)
-        # # print(v, x, y)
-        # # print(a, b)
-        # # print(x, y)
-        # # idx = (x >= 0) & (x < self.edg.shape[0]) & (y >= 0) & (y < self.edg.shape[1])
-        # # x, y = x[idx], y[idx]
-        # x = x.astype(int)
-        # y = y.astype(int)
-        # n = min(x.size, y.size)
-        # return x[:n], y[:n]
 
     def get_angle_sin(self, a, b): #a, b - segments
         return (a[0]*b[1]-a[1]*b[0])/np.linalg.norm(a)/np.linalg.norm(b)
@@ -79,7 +52,6 @@ class SideDetector:
         return np.mean(self.edg[rr, cc])
     
     def propose_nodes(self, node, a, b): #a, b - segments
-        # print(a, b)
         center = np.array(node.center)
         p = self.intersection(a, b)
         q = p+2*(center-p)
@@ -96,7 +68,6 @@ class SideDetector:
         self.img[int(n2.center[0]), int(n2.center[1])] = [0, 1, 1]
         # plt.imshow(self.img)
         # plt.show()
-        # rr, cc = get_line_point_point(p, r)
         try:
             val = self.get_line_value(p, r)+self.get_line_value(p, s)
         except:
@@ -125,23 +96,18 @@ class SideDetector:
             maxv = np.max(p[1:-1])
             idx = (p[1:-1] >= p[:-2]) & (p[1:-1] >= p[2:]) & (p[1:-1] >= min(threshold, maxv))
             id = np.argmax(idx)+1
-            # print("id: ", id, p.shape, np.count_nonzero(idx))
-            # idx = (np.argmax(self.edg[l[0], l[1]] >= min(threshold, maxv)))
             points.append((l[0][id], l[1][id]))
             self.img[int(l[0][id]), int(l[1][id])] = [1, 1, 0]
-            # print("edg: ", maxv, self.edg[l[0][id], l[1][id]])
-            # print(theta)
         
         proposals = []
-        cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+        # cols = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
         for i in range(n):
             a, b = points[i], points[-n+1+i]
-            rr, cc = line(a[0], a[1], b[0], b[1])
+            # rr, cc = line(a[0], a[1], b[0], b[1])
             # img[rr, cc] = cols[i%3]
             # print(a, b)
             idx = self.get_line_point_point(np.array(a, dtype=np.float), np.array(b, dtype=np.float))
-            val = np.mean(self.edg[idx[0], idx[1]])#/np.std(self.edg[idx[0], idx[1]])
-            # print("val: ", val)
+            val = np.mean(self.edg[idx[0], idx[1]])
             proposals.append((np.array(a), np.array(b), val))
 
         proposals.sort(key=itemgetter(2), reverse=True)

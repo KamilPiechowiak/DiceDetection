@@ -1,5 +1,4 @@
 import numpy as np
-from skimage.filters import median
 from skimage.color import rgb2hsv, rgb2gray
 from skimage import io
 
@@ -9,17 +8,11 @@ from comparator import Comparator
 from utils import change_colors
 from side_detector import SideDetector
 
-import matplotlib.pyplot as plt
-
 def analyze():
     k = 5
     for i in range(24, 28):
         img = io.imread('small/' + str(i) + '.jpg')
-        img = median(img)
-        # res = img_to_nodes(img)
-        # res = change_colors(res)
-        # # res = sg.mark_boundaries(img, res)
-        # res = np.array(res, dtype=np.float)
+        
 
         dd = DiceDetector()
         dd.detect(img)
